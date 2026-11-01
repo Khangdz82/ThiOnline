@@ -147,10 +147,10 @@ export default function CreateExamPage() {
               <button
                 type="button"
                 onClick={() => setInputMode("upload")}
-                className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                className={`btn px-4 py-2 text-sm ${
                   inputMode === "upload"
-                    ? "bg-emerald-600 text-white shadow-sm"
-                    : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                    ? "btn-primary"
+                    : "btn-ghost border-transparent"
                 }`}
               >
                 <Upload className="h-4 w-4" />
@@ -160,10 +160,10 @@ export default function CreateExamPage() {
               <button
                 type="button"
                 onClick={() => setInputMode("paste")}
-                className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                className={`btn px-4 py-2 text-sm ${
                   inputMode === "paste"
-                    ? "bg-emerald-600 text-white shadow-sm"
-                    : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                    ? "btn-primary"
+                    : "btn-ghost border-transparent"
                 }`}
               >
                 <FileText className="h-4 w-4" />
@@ -193,7 +193,7 @@ export default function CreateExamPage() {
                   />
                   <label
                     htmlFor="docxInput"
-                    className="mt-4 inline-flex cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+                    className="mt-4 btn btn-dark px-4 py-2 text-xs cursor-pointer"
                   >
                     Chọn file từ máy tính
                   </label>
@@ -218,7 +218,7 @@ export default function CreateExamPage() {
                   type="button"
                   disabled={isParsing || (inputMode === "upload" && !selectedFile) || (inputMode === "paste" && !rawText.trim())}
                   onClick={handleParse}
-                  className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 disabled:opacity-50 transition-colors"
+                  className="btn btn-primary px-5 py-2.5 text-sm"
                 >
                   <Sparkles className="h-4 w-4" />
                   <span>{isParsing ? "Đang phân tích..." : "Phân tích & Tách câu hỏi"}</span>
@@ -371,7 +371,7 @@ export default function CreateExamPage() {
               <button
                 type="submit"
                 disabled={isSubmitting || questions.length === 0}
-                className="w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-md hover:bg-emerald-500 disabled:opacity-50 transition-colors"
+                className="w-full btn btn-primary py-3 text-sm shadow-md"
               >
                 {isSubmitting ? "Đang lưu đề thi..." : "Lưu & Xuất bản Đề thi"}
               </button>

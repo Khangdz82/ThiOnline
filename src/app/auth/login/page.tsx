@@ -66,7 +66,7 @@ export default function LoginPage() {
             Đăng nhập ThiOnline
           </h1>
           <p className="mt-1 text-xs text-slate-500">
-            Hệ thống thi & đánh giá 0% quảng cáo
+            Hệ thống thi & đánh giá trực tuyến
           </p>
         </div>
 
@@ -78,7 +78,7 @@ export default function LoginPage() {
             className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all ${
               roleTab === "teacher"
                 ? "bg-white text-emerald-700 shadow-sm dark:bg-slate-900 dark:text-emerald-400"
-                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-700/60"
             }`}
           >
             <GraduationCap className="h-4 w-4" />
@@ -91,7 +91,7 @@ export default function LoginPage() {
             className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all ${
               roleTab === "student"
                 ? "bg-white text-emerald-700 shadow-sm dark:bg-slate-900 dark:text-emerald-400"
-                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-700/60"
             }`}
           >
             <User className="h-4 w-4" />
@@ -143,11 +143,11 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-md hover:bg-emerald-500 disabled:opacity-50 transition-colors"
+              className="w-full btn btn-primary py-3 text-sm shadow-md"
             >
               {loading ? "Đang đăng nhập..." : "Đăng nhập Giáo viên"}
             </button>
-
+ 
             <p className="text-center text-xs text-slate-500">
               Chưa có tài khoản Giáo viên?{" "}
               <Link href="/auth/register" className="font-semibold text-emerald-600 hover:underline">
@@ -180,7 +180,7 @@ export default function LoginPage() {
               />
               <button
                 type="submit"
-                className="w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-md hover:bg-emerald-500 transition-colors flex items-center justify-center gap-2"
+                className="w-full btn btn-primary py-3 text-sm shadow-md flex items-center justify-center gap-2"
               >
                 <span>Vào phòng thi ngay</span>
                 <ArrowRight className="h-4 w-4" />

@@ -98,7 +98,7 @@ export default function QuestionBankPage() {
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500"
+          className="btn btn-primary px-4 py-2.5 text-sm"
         >
           <Plus className="h-4 w-4" />
           <span>+ Thêm câu hỏi vào kho</span>
@@ -201,8 +201,8 @@ export default function QuestionBankPage() {
 
       {/* MODAL: ADD QUESTION */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <form onSubmit={handleCreateQuestion} className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <form onSubmit={handleCreateQuestion} className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 space-y-4">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">Thêm câu hỏi mới vào kho</h3>
 
             <div className="grid grid-cols-3 gap-3">
@@ -222,15 +222,35 @@ export default function QuestionBankPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300">Khối lớp</label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300">Khối lớp / Cấp học</label>
                 <select
                   value={grade}
                   onChange={(e) => setGrade(e.target.value)}
                   className="mt-1 w-full rounded-xl border border-slate-300 p-2 text-xs dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
                 >
-                  <option value="10">Lớp 10</option>
-                  <option value="11">Lớp 11</option>
-                  <option value="12">Lớp 12</option>
+                  <optgroup label="Cấp 3 - THPT">
+                    <option value="12">Lớp 12</option>
+                    <option value="11">Lớp 11</option>
+                    <option value="10">Lớp 10</option>
+                  </optgroup>
+                  <optgroup label="Cấp 2 - THCS">
+                    <option value="9">Lớp 9</option>
+                    <option value="8">Lớp 8</option>
+                    <option value="7">Lớp 7</option>
+                    <option value="6">Lớp 6</option>
+                  </optgroup>
+                  <optgroup label="Cấp 1 - Tiểu học">
+                    <option value="5">Lớp 5</option>
+                    <option value="4">Lớp 4</option>
+                    <option value="3">Lớp 3</option>
+                    <option value="2">Lớp 2</option>
+                    <option value="1">Lớp 1</option>
+                  </optgroup>
+                  <optgroup label="Đại học & Đào tạo khác">
+                    <option value="Đại học">Đại học / Cao đẳng</option>
+                    <option value="Luyện thi">Luyện thi ĐGNL / Tốt nghiệp</option>
+                    <option value="Khác">Khác</option>
+                  </optgroup>
                 </select>
               </div>
 
@@ -305,13 +325,13 @@ export default function QuestionBankPage() {
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="rounded-lg border px-4 py-2 text-xs text-slate-600"
+                className="btn btn-ghost px-4 py-2 text-xs"
               >
                 Hủy
               </button>
               <button
                 type="submit"
-                className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white"
+                className="btn btn-primary px-4 py-2 text-xs"
               >
                 Lưu vào kho
               </button>

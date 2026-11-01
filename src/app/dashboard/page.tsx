@@ -53,20 +53,20 @@ export default function DashboardPage() {
             Bảng điều khiển Giảng dạy
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Tổng quan hệ thống thi và đánh giá trực tuyến không quảng cáo.
+            Tổng quan hệ thống thi và đánh giá trực tuyến.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <Link
             href="/classes"
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            className="btn btn-secondary px-4 py-2 text-sm"
           >
             Quản lý Lớp
           </Link>
           <Link
             href="/exams/create"
-            className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500"
+            className="btn btn-primary px-4 py-2 text-sm"
           >
             <Plus className="h-4 w-4" />
             <span>Tạo đề thi mới</span>
@@ -177,7 +177,7 @@ export default function DashboardPage() {
                       <td className="py-3.5 text-right">
                         <Link
                           href={`/grade/${sub.id}`}
-                          className="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300"
+                          className="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/80 dark:text-emerald-300 dark:hover:bg-emerald-900 transition-colors"
                         >
                           Chấm bài
                         </Link>

@@ -11,8 +11,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ThiOnline - Nền tảng Thi & Đánh giá Trực tuyến (0% Quảng cáo, Mã nguồn mở)",
-  description: "Hệ thống tạo đề thi, quản lý lớp học, phòng thi chống gian lận và chấm bài tự động. 100% miễn phí.",
+  title: "ThiOnline - Nền tảng Thi & Đánh giá Trực tuyến",
+  description: "Hệ thống tạo đề thi, quản lý lớp học, phòng thi chống gian lận và chấm bài trực tuyến.",
 };
 
 export default function RootLayout({

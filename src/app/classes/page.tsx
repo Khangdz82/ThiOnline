@@ -14,6 +14,13 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 
+function formatGrade(grade: any) {
+  if (!grade) return "";
+  const s = String(grade).trim();
+  if (/^\d+$/.test(s)) return `Khối ${s}`;
+  return s;
+}
+
 export default function ClassesPage() {
   const toast = useToast();
   const [classes, setClasses] = useState<any[]>([]);
@@ -171,7 +178,7 @@ export default function ClassesPage() {
 
         <button
           onClick={() => setShowNewClass(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 transition-colors"
+          className="btn btn-primary px-4 py-2.5 text-sm"
         >
           <Plus className="h-4 w-4" />
           <span>+ Tạo lớp mới</span>
@@ -192,8 +199,8 @@ export default function ClassesPage() {
                 onClick={() => selectClass(cls)}
                 className={`w-full flex items-center justify-between rounded-xl p-3.5 text-left text-sm font-semibold transition-all ${
                   selectedClass?.id === cls.id
-                    ? "bg-emerald-600 text-white shadow-sm"
-                    : "bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-200"
+                    ? "bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-500/20"
+                    : "bg-white border border-slate-200 text-slate-800 hover:bg-slate-100 hover:text-slate-950 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-white"
                 }`}
               >
                 <div>
@@ -207,10 +214,10 @@ export default function ClassesPage() {
                   </span>
                 </div>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-xs ${
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                     selectedClass?.id === cls.id
                       ? "bg-emerald-700 text-white"
-                      : "bg-slate-100 text-slate-600 dark:bg-slate-800"
+                      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                   }`}
                 >
                   {cls.student_count || 0} HS
@@ -228,7 +235,7 @@ export default function ClassesPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 dark:border-slate-800">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                    {selectedClass.name} (Khối {selectedClass.grade})
+                    {selectedClass.name} ({formatGrade(selectedClass.grade)})
                   </h3>
                   <p className="text-xs text-slate-400">
                     Mã mời tham gia: <strong className="text-emerald-600">{selectedClass.code}</strong> • Sĩ số: {students.length} học sinh
@@ -236,7 +243,7 @@ export default function ClassesPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200">
+                  <label className="btn btn-secondary px-3.5 py-2 text-xs">
                     <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
                     <span>Import Excel</span>
                     <input
@@ -249,7 +256,7 @@ export default function ClassesPage() {
 
                   <button
                     onClick={() => setShowNewStudent(true)}
-                    className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-500"
+                    className="btn btn-primary px-3.5 py-2 text-xs"
                   >
                     <Plus className="h-4 w-4" />
                     <span>+ Thêm học sinh</span>
@@ -302,8 +309,8 @@ export default function ClassesPage() {
 
       {/* MODAL: CREATE CLASS */}
       {showNewClass && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <form onSubmit={handleCreateClass} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <form onSubmit={handleCreateClass} className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 space-y-4">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">Tạo lớp học mới</h3>
             <div>
               <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300">Tên lớp</label>
@@ -317,29 +324,49 @@ export default function ClassesPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300">Khối lớp</label>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300">Khối lớp / Trình độ</label>
               <select
                 value={newClassGrade}
                 onChange={(e) => setNewClassGrade(e.target.value)}
                 className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 text-sm dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
               >
-                <option value="10">Khối 10</option>
-                <option value="11">Khối 11</option>
-                <option value="12">Khối 12</option>
-                <option value="Other">Khác</option>
+                <optgroup label="Cấp 3 - THPT">
+                  <option value="12">Khối 12</option>
+                  <option value="11">Khối 11</option>
+                  <option value="10">Khối 10</option>
+                </optgroup>
+                <optgroup label="Cấp 2 - THCS">
+                  <option value="9">Khối 9</option>
+                  <option value="8">Khối 8</option>
+                  <option value="7">Khối 7</option>
+                  <option value="6">Khối 6</option>
+                </optgroup>
+                <optgroup label="Cấp 1 - Tiểu học">
+                  <option value="5">Khối 5</option>
+                  <option value="4">Khối 4</option>
+                  <option value="3">Khối 3</option>
+                  <option value="2">Khối 2</option>
+                  <option value="1">Khối 1</option>
+                </optgroup>
+                <optgroup label="Đại học & Đào tạo chuyên sâu">
+                  <option value="Đại học">Đại học / Cao đẳng</option>
+                  <option value="Luyện thi">Luyện thi ĐGNL / Tốt nghiệp</option>
+                  <option value="Trung tâm">Trung tâm Ngoại ngữ / Tin học</option>
+                  <option value="Khác">Khối khác</option>
+                </optgroup>
               </select>
             </div>
             <div className="flex justify-end gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setShowNewClass(false)}
-                className="rounded-lg border px-4 py-2 text-sm text-slate-600"
+                className="btn btn-ghost px-4 py-2 text-sm"
               >
                 Hủy
               </button>
               <button
                 type="submit"
-                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white"
+                className="btn btn-primary px-5 py-2 text-sm"
               >
                 Tạo lớp
               </button>
@@ -350,8 +377,8 @@ export default function ClassesPage() {
 
       {/* MODAL: ADD STUDENT */}
       {showNewStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <form onSubmit={handleAddStudent} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <form onSubmit={handleAddStudent} className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 space-y-4">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">Thêm học sinh mới</h3>
             <div>
               <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300">Họ và tên</label>
@@ -384,6 +411,7 @@ export default function ClassesPage() {
                 >
                   <option value="Nam">Nam</option>
                   <option value="Nữ">Nữ</option>
+                  <option value="Khác">Khác</option>
                 </select>
               </div>
             </div>
@@ -400,13 +428,13 @@ export default function ClassesPage() {
               <button
                 type="button"
                 onClick={() => setShowNewStudent(false)}
-                className="rounded-lg border px-4 py-2 text-sm text-slate-600"
+                className="btn btn-ghost px-4 py-2 text-sm"
               >
                 Hủy
               </button>
               <button
                 type="submit"
-                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white"
+                className="btn btn-primary px-5 py-2 text-sm"
               >
                 Lưu học sinh
               </button>

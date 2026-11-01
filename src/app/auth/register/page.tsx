@@ -139,7 +139,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-md hover:bg-emerald-500 disabled:opacity-50 transition-colors mt-2"
+            className="w-full btn btn-primary py-3 text-sm shadow-md mt-2"
           >
             {loading ? "Đang tạo tài khoản..." : "Hoàn tất Đăng ký"}
           </button>

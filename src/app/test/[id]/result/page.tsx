@@ -270,7 +270,7 @@ export default function ExamResultPage() {
       <div className="mt-8 text-center">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition-colors dark:bg-slate-100 dark:text-slate-900"
+          className="btn btn-dark px-5 py-2.5 text-sm"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Về trang chủ</span>
