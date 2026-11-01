@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { MathView } from "@/components/MathView";
+import { useToast } from "@/components/Toast";
 import * as XLSX from "xlsx";
 import {
   FileText,
@@ -21,6 +22,7 @@ import {
 
 export default function ExamDetailPage() {
   const params = useParams();
+  const toast = useToast();
   const examId = params?.id as string;
 
   const [data, setData] = useState<any>(null);
@@ -49,13 +51,14 @@ export default function ExamDetailPage() {
     const url = `${window.location.origin}/test/${examId}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
+    toast.success("Đã copy link phòng thi vào clipboard!");
     setTimeout(() => setCopied(false), 2000);
   };
 
   // Export submissions to Excel (.xlsx)
   const handleExportExcel = () => {
     if (!data?.submissions || data.submissions.length === 0) {
-      alert("Chưa có học sinh nào nộp bài để xuất bảng điểm.");
+      toast.warning("Chưa có học sinh nào nộp bài để xuất bảng điểm.");
       return;
     }
 

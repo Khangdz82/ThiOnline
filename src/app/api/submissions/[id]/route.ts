@@ -52,21 +52,36 @@ export async function PUT(
 
     const {
       score,
+      answers,
       teacher_feedback = "",
       essay_annotations = [],
     } = body;
 
     const db = getDb();
-    db.prepare(`
-      UPDATE submissions
-      SET score = ?, teacher_feedback = ?, essay_annotations = ?, status = 'graded', graded_at = datetime('now')
-      WHERE id = ?
-    `).run(
-      score,
-      teacher_feedback,
-      JSON.stringify(essay_annotations),
-      id
-    );
+    if (answers) {
+      db.prepare(`
+        UPDATE submissions
+        SET score = ?, answers = ?, teacher_feedback = ?, essay_annotations = ?, status = 'graded', graded_at = datetime('now')
+        WHERE id = ?
+      `).run(
+        score,
+        JSON.stringify(answers),
+        teacher_feedback,
+        JSON.stringify(essay_annotations),
+        id
+      );
+    } else {
+      db.prepare(`
+        UPDATE submissions
+        SET score = ?, teacher_feedback = ?, essay_annotations = ?, status = 'graded', graded_at = datetime('now')
+        WHERE id = ?
+      `).run(
+        score,
+        teacher_feedback,
+        JSON.stringify(essay_annotations),
+        id
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

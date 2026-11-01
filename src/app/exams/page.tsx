@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useToast } from "@/components/Toast";
 import {
   FileText,
   Plus,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 
 export default function ExamsListPage() {
+  const toast = useToast();
   const [exams, setExams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -41,6 +43,7 @@ export default function ExamsListPage() {
     const url = `${window.location.origin}/test/${examId}`;
     navigator.clipboard.writeText(url);
     setCopiedId(examId);
+    toast.success("Đã copy link phòng thi!");
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -51,9 +54,10 @@ export default function ExamsListPage() {
       const json = await res.json();
       if (json.success) {
         setExams((prev) => prev.filter((e) => e.id !== examId));
+        toast.success("Đã xóa đề thi thành công!");
       }
     } catch (e) {
-      alert("Xóa thất bại");
+      toast.error("Xóa đề thi thất bại");
     }
   };
 

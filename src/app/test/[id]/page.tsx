@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useTransition } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { MathView } from "@/components/MathView";
+import { useToast } from "@/components/Toast";
 import {
   Clock,
   AlertTriangle,
@@ -16,6 +17,7 @@ import {
   ShieldAlert,
   HelpCircle,
   X,
+  UserCheck,
 } from "lucide-react";
 
 interface Option {
@@ -39,11 +41,13 @@ interface ExamInfo {
   duration: number;
   password?: string;
   anti_cheat_level: string;
+  assigned_class_ids?: string;
 }
 
 export default function ExamRoomPage() {
   const params = useParams();
   const router = useRouter();
+  const toast = useToast();
   const examId = params?.id as string;
 
   // Student Identification State
@@ -52,7 +56,7 @@ export default function ExamRoomPage() {
   const [studentCode, setStudentCode] = useState("");
   const [className, setClassName] = useState("");
   const [examPassword, setExamPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const [classStudents, setClassStudents] = useState<any[]>([]);
 
   // Exam Data
   const [exam, setExam] = useState<ExamInfo | null>(null);
@@ -71,11 +75,11 @@ export default function ExamRoomPage() {
 
   // Anti-cheat State
   const [violationCount, setViolationCount] = useState(0);
-  const [lastViolationMsg, setLastViolationMsg] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const awayTimerRef = useRef<number | null>(null);
+  const MAX_ALLOWED_VIOLATIONS = 3;
 
-  // 1. Fetch Exam Data
+  // 1. Fetch Exam Data & Class Students
   useEffect(() => {
     async function fetchExam() {
       try {
@@ -85,8 +89,21 @@ export default function ExamRoomPage() {
           setExam(data.exam);
           setQuestions(data.questions || []);
           setTimeLeft((data.exam.duration || 45) * 60);
+
+          // If exam is assigned to a class, fetch student roster
+          try {
+            const classIds = JSON.parse(data.exam.assigned_class_ids || "[]");
+            if (classIds.length > 0) {
+              const cRes = await fetch(`/api/classes/${classIds[0]}/students`);
+              const cJson = await cRes.json();
+              if (cJson.success && cJson.students?.length > 0) {
+                setClassStudents(cJson.students);
+                if (cJson.class?.name) setClassName(cJson.class.name);
+              }
+            }
+          } catch {}
         } else {
-          alert("Lỗi tải đề thi: " + data.error);
+          toast.error("Lỗi tải đề thi: " + data.error);
         }
       } catch (e) {
         console.error("Fetch exam error:", e);
@@ -123,10 +140,38 @@ export default function ExamRoomPage() {
     } catch {}
   }, [answers, hasStarted, examId, studentName, studentCode, className]);
 
-  // 2. Anti-cheat Monitors (Visibility change, Tab switch, Window blur)
+  // 2. Advanced Anti-cheat: Block Right Click, Copy, Cut, Paste, F12, Tab-switch
   useEffect(() => {
     if (!hasStarted) return;
 
+    // Block right-click context menu
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      toast.warning("Hành động bị chặn: Không được dùng chuột phải trong phòng thi!");
+    };
+
+    // Block copy / cut / paste
+    const handleCopy = (e: ClipboardEvent) => {
+      e.preventDefault();
+      toast.warning("Hành động bị chặn: Không được sao chép nội dung bài thi!");
+    };
+    const handlePaste = (e: ClipboardEvent) => {
+      e.preventDefault();
+      toast.warning("Hành động bị chặn: Không được dán văn bản từ ngoài vào!");
+    };
+
+    // Block keys (Ctrl+C, Ctrl+V, Ctrl+U, F12)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        (e.ctrlKey && (e.key === "c" || e.key === "v" || e.key === "u" || e.key === "a")) ||
+        e.key === "F12"
+      ) {
+        e.preventDefault();
+        toast.warning("Phím tắt này bị vô hiệu hóa trong phòng thi!");
+      }
+    };
+
+    // Tab switch & visibility detection
     const handleVisibilityChange = () => {
       if (document.hidden) {
         awayTimerRef.current = Date.now();
@@ -134,7 +179,7 @@ export default function ExamRoomPage() {
         if (awayTimerRef.current) {
           const secondsAway = Math.round((Date.now() - awayTimerRef.current) / 1000);
           awayTimerRef.current = null;
-          logViolation("tab_switch", secondsAway, `Rời màn hình thi ${secondsAway}s`);
+          handleViolation("tab_switch", secondsAway, `Rời khỏi màn hình thi ${secondsAway} giây`);
         }
       }
     };
@@ -149,32 +194,50 @@ export default function ExamRoomPage() {
       if (awayTimerRef.current) {
         const secondsAway = Math.round((Date.now() - awayTimerRef.current) / 1000);
         awayTimerRef.current = null;
-        logViolation("window_blur", secondsAway, `Mất tiêu điểm cửa sổ ${secondsAway}s`);
+        handleViolation("window_blur", secondsAway, `Mất tiêu điểm cửa sổ ${secondsAway} giây`);
       }
     };
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
-      e.returnValue = "Bạn đang trong phòng thi! Dữ liệu bài làm có thể bị mất nếu thoát.";
+      e.returnValue = "Bạn đang làm bài thi! Rời khỏi trang sẽ nộp bài ngay lập tức.";
       return e.returnValue;
     };
 
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("copy", handleCopy);
+    document.addEventListener("cut", handleCopy);
+    document.addEventListener("paste", handlePaste);
+    window.addEventListener("keydown", handleKeyDown);
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("blur", handleWindowBlur);
     window.addEventListener("focus", handleWindowFocus);
     window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("copy", handleCopy);
+      document.removeEventListener("cut", handleCopy);
+      document.removeEventListener("paste", handlePaste);
+      window.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleWindowBlur);
       window.removeEventListener("focus", handleWindowFocus);
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [hasStarted, examId]);
+  }, [hasStarted, examId, violationCount]);
 
-  const logViolation = async (eventType: string, durationSeconds: number, details: string) => {
-    setViolationCount((prev) => prev + 1);
-    setLastViolationMsg(`Cảnh báo vi phạm: Bạn vừa rời màn hình thi (${details}). Hệ thống đã báo cáo giáo viên.`);
+  const handleViolation = async (eventType: string, durationSeconds: number, details: string) => {
+    const newCount = violationCount + 1;
+    setViolationCount(newCount);
+
+    if (newCount >= MAX_ALLOWED_VIOLATIONS) {
+      toast.error(`Bạn đã vi phạm chuyển tab quá ${MAX_ALLOWED_VIOLATIONS} lần! Bài thi tự động thu hồi.`);
+      handleSubmitExam(true);
+      return;
+    }
+
+    toast.warning(`Cảnh báo vi phạm (${newCount}/${MAX_ALLOWED_VIOLATIONS}): Bạn vừa rời màn hình thi!`);
 
     try {
       await fetch(`/api/exams/${examId}/violations`, {
@@ -197,7 +260,7 @@ export default function ExamRoomPage() {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          handleSubmitExam(true); // Auto submit on timeout
+          handleSubmitExam(true);
           return 0;
         }
         return prev - 1;
@@ -220,19 +283,20 @@ export default function ExamRoomPage() {
   const handleStartExam = (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentName.trim()) {
-      alert("Vui lòng nhập Họ và tên!");
+      toast.warning("Vui lòng nhập hoặc chọn Họ và tên!");
       return;
     }
 
     if (exam?.password && exam.password.trim() !== "") {
       if (examPassword !== exam.password) {
-        setPasswordError("Mật khẩu đề thi không đúng!");
+        toast.error("Mật khẩu đề thi không chính xác!");
         return;
       }
     }
 
     setStartTime(Date.now());
     setHasStarted(true);
+    toast.success("Bắt đầu làm bài thi! Chúc bạn làm bài tốt.");
 
     // Prompt for full screen mode
     if (exam?.anti_cheat_level === "strict") {
@@ -297,6 +361,7 @@ export default function ExamRoomPage() {
             },
           };
         });
+        toast.success("Đã đính kèm ảnh bài làm!");
       };
       reader.readAsDataURL(file);
     });
@@ -346,15 +411,16 @@ export default function ExamRoomPage() {
       const data = await res.json();
       if (data.success) {
         localStorage.removeItem(`exam_draft_${examId}`);
+        toast.success("Nộp bài thi thành công!");
         router.push(
           `/test/${examId}/result?subId=${data.submissionId}&score=${data.score}&auto=${isAuto ? 1 : 0}`
         );
       } else {
-        alert("Nộp bài thất bại: " + data.error);
+        toast.error("Nộp bài thất bại: " + data.error);
         setIsSubmitting(false);
       }
     } catch (err: any) {
-      alert("Lỗi kết nối khi nộp bài: " + err.message);
+      toast.error("Lỗi kết nối khi nộp bài: " + err.message);
       setIsSubmitting(false);
     }
   };
@@ -387,27 +453,55 @@ export default function ExamRoomPage() {
     );
   }
 
-  // SCREEN 1: BÁO DANH / ĐĂNG NHẬP PHÒNG THI
+  // SCREEN 1: BÁO DANH / CHỌN TÊN TRONG LỚP (KHÔNG CẦN TÀI KHOẢN)
   if (!hasStarted) {
     return (
       <div className="flex min-h-[90vh] items-center justify-center p-4">
-        <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 shadow-xl dark:border-slate-800 dark:bg-slate-900">
+        <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-8 shadow-xl dark:border-slate-800 dark:bg-slate-900">
           <div className="mb-6 text-center">
-            <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-              Phòng thi trực tuyến • 0 Quảng cáo
+            <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-900">
+              Phòng thi trực tuyến • 0% Quảng cáo
             </span>
             <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               {exam?.title || "Đề kiểm tra"}
             </h1>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Thời gian làm bài: <strong className="text-slate-800 dark:text-slate-200">{exam?.duration} phút</strong> •{" "}
+              Thời gian: <strong className="text-slate-800 dark:text-slate-200">{exam?.duration} phút</strong> •{" "}
               Số lượng: <strong className="text-slate-800 dark:text-slate-200">{questions.length} câu hỏi</strong>
             </p>
           </div>
 
+          {/* Quick Select from Class Roster if Available */}
+          {classStudents.length > 0 && (
+            <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
+              <label className="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-2 flex items-center gap-1.5">
+                <UserCheck className="h-4 w-4 text-emerald-600" />
+                <span>Chọn tên của bạn từ danh sách lớp ({classStudents.length} HS):</span>
+              </label>
+              <select
+                value={studentCode}
+                onChange={(e) => {
+                  const s = classStudents.find((item) => item.student_code === e.target.value);
+                  if (s) {
+                    setStudentName(s.name);
+                    setStudentCode(s.student_code);
+                  }
+                }}
+                className="w-full rounded-xl border border-slate-300 bg-white p-2.5 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              >
+                <option value="">-- Bấm vào đây để chọn tên bạn --</option>
+                {classStudents.map((std) => (
+                  <option key={std.id} value={std.student_code}>
+                    {std.student_code ? `[${std.student_code}] ` : ""}{std.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <form onSubmit={handleStartExam} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">
                 Họ và tên học sinh <span className="text-rose-500">*</span>
               </label>
               <input
@@ -416,26 +510,26 @@ export default function ExamRoomPage() {
                 value={studentName}
                 onChange={(e) => setStudentName(e.target.value)}
                 placeholder="Ví dụ: Nguyễn Văn An"
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Số báo danh (SBD) / Mã HS
+                <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">
+                  Số báo danh (SBD)
                 </label>
                 <input
                   type="text"
                   value={studentCode}
                   onChange={(e) => setStudentCode(e.target.value)}
                   placeholder="SBD001"
-                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">
                   Lớp
                 </label>
                 <input
@@ -443,45 +537,39 @@ export default function ExamRoomPage() {
                   value={className}
                   onChange={(e) => setClassName(e.target.value)}
                   placeholder="12A1"
-                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 />
               </div>
             </div>
 
             {exam?.password ? (
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">
                   Mật khẩu bài thi <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="password"
                   required
                   value={examPassword}
-                  onChange={(e) => {
-                    setExamPassword(e.target.value);
-                    setPasswordError("");
-                  }}
-                  placeholder="Nhập mật khẩu do giáo viên cấp"
-                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  onChange={(e) => setExamPassword(e.target.value)}
+                  placeholder="Nhập mật khẩu do thầy/cô cấp"
+                  className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 />
-                {passwordError && (
-                  <p className="mt-1 text-xs text-rose-500">{passwordError}</p>
-                )}
               </div>
             ) : null}
 
-            <div className="rounded-lg bg-amber-50 p-3.5 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200/60 dark:border-amber-900/60 flex items-start gap-2.5">
-              <ShieldAlert className="h-5 w-5 shrink-0 text-amber-600" />
+            <div className="rounded-2xl bg-amber-50 p-4 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200 border border-amber-200/60 dark:border-amber-900/60 flex items-start gap-3">
+              <ShieldAlert className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
               <div>
-                <strong>Quy định phòng thi nghiêm túc:</strong> Hệ thống tự động ghi nhật ký khi chuyển tab, thu nhỏ hoặc rời khỏi cửa sổ làm bài. Hãy đảm bảo đường truyền mạng ổn định trước khi bắt đầu.
+                <strong>Quy chế phòng thi chống gian lận:</strong> Chặn copy/paste, chặn chuột phải, phát hiện chuyển tab hoặc thu nhỏ cửa sổ. Nếu vi phạm quá <strong>{MAX_ALLOWED_VIOLATIONS} lần</strong>, hệ thống sẽ tự động thu bài thi.
               </div>
             </div>
 
             <button
               type="submit"
-              className="w-full rounded-lg bg-emerald-600 py-3 text-sm font-semibold text-white shadow-md hover:bg-emerald-500 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+              className="w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-md hover:bg-emerald-500 transition-colors"
             >
-              Bắt đầu làm bài thi
+              Vào làm bài thi ngay
             </button>
           </form>
         </div>
@@ -492,31 +580,17 @@ export default function ExamRoomPage() {
   // Format time remaining
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
-  const isTimeWarning = timeLeft < 300; // Under 5 minutes
+  const isTimeWarning = timeLeft < 300;
 
   // SCREEN 2: ACTIVE EXAM ROOM (FOCUS MODE)
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 pb-20">
-      {/* Violation Alert Toast */}
-      {lastViolationMsg && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-3 rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800 shadow-lg dark:border-rose-900 dark:bg-rose-950 dark:text-rose-200 animate-in fade-in slide-in-from-top-2">
-          <AlertTriangle className="h-5 w-5 text-rose-600" />
-          <span>{lastViolationMsg}</span>
-          <button
-            onClick={() => setLastViolationMsg("")}
-            className="ml-auto text-rose-600 hover:text-rose-800"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-
-      {/* Floating Top Bar: Sticky Timer, Candidate Info, Anti-cheat status, Submit button */}
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 pb-20 select-none">
+      {/* Floating Top Bar */}
       <div className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
           {/* Left: Candidate info */}
           <div className="flex items-center gap-3 truncate">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
               {studentName.charAt(0).toUpperCase()}
             </div>
             <div className="truncate">
@@ -548,21 +622,21 @@ export default function ExamRoomPage() {
             {violationCount > 0 && (
               <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-950 dark:text-rose-300">
                 <AlertTriangle className="h-3.5 w-3.5" />
-                {violationCount} lần rời tab
+                {violationCount}/{MAX_ALLOWED_VIOLATIONS} vi phạm
               </span>
             )}
 
             <button
               onClick={toggleFullscreen}
               title="Toàn màn hình"
-              className="hidden sm:flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              className="hidden sm:flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </button>
 
             <button
               onClick={() => setShowSubmitModal(true)}
-              className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 transition-colors"
+              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 transition-colors"
             >
               <Send className="h-4 w-4" />
               <span>Nộp bài ({totalAnswered}/{questions.length})</span>
@@ -589,33 +663,33 @@ export default function ExamRoomPage() {
                   {/* Question Header */}
                   <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-3 dark:border-slate-800">
                     <div className="flex items-center gap-2">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-600 text-sm font-bold text-white">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-sm font-bold text-white">
                         {idx + 1}
                       </span>
                       <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                         {q.type === "single_choice"
-                          ? "Trắc nghiệm (1 đáp án)"
+                          ? "Trắc nghiệm 4 lựa chọn"
                           : q.type === "true_false"
                           ? "Đúng / Sai (GDPT 2018)"
                           : q.type === "essay"
                           ? "Tự luận"
                           : "Trả lời ngắn"}
                       </span>
-                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                         {q.score} điểm
                       </span>
                     </div>
 
                     <button
                       onClick={() => toggleBookmark(q.id)}
-                      className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                      className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
                         isMarked
                           ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                           : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                       }`}
                     >
                       <Bookmark className={`h-3.5 w-3.5 ${isMarked ? "fill-amber-500 text-amber-500" : ""}`} />
-                      <span>{isMarked ? "Đã đánh dấu" : "Đánh dấu"}</span>
+                      <span>{isMarked ? "Đã đánh dấu" : "Đánh dấu xem lại"}</span>
                     </button>
                   </div>
 
@@ -740,7 +814,7 @@ export default function ExamRoomPage() {
 
                         {/* Image upload area */}
                         <div>
-                          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 shadow-sm">
                             <Upload className="h-4 w-4 text-emerald-600" />
                             <span>Chụp ảnh / Đính kèm ảnh bài làm</span>
                             <input
@@ -756,7 +830,7 @@ export default function ExamRoomPage() {
                           {ans?.images && ans.images.length > 0 && (
                             <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
                               {ans.images.map((img: string, iIdx: number) => (
-                                <div key={iIdx} className="group relative rounded-lg border border-slate-200 overflow-hidden">
+                                <div key={iIdx} className="group relative rounded-xl border border-slate-200 overflow-hidden shadow-sm">
                                   <img
                                     src={img}
                                     alt={`Bài làm trang ${iIdx + 1}`}
@@ -765,11 +839,11 @@ export default function ExamRoomPage() {
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveEssayImage(q.id, iIdx)}
-                                    className="absolute top-1 right-1 rounded-full bg-rose-600 p-1 text-white opacity-90 hover:opacity-100"
+                                    className="absolute top-1.5 right-1.5 rounded-full bg-rose-600 p-1 text-white shadow hover:bg-rose-700"
                                   >
                                     <X className="h-3 w-3" />
                                   </button>
-                                  <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
+                                  <span className="absolute bottom-1.5 left-1.5 rounded-md bg-black/70 px-2 py-0.5 text-[10px] text-white font-medium">
                                     Ảnh {iIdx + 1}
                                   </span>
                                 </div>
@@ -788,9 +862,9 @@ export default function ExamRoomPage() {
           {/* Right Column: Question Palette (Sticky Sidebar) */}
           <div className="lg:col-span-1">
             <div className="sticky top-20 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <h3 className="font-semibold text-slate-900 dark:text-white flex items-center justify-between">
+              <h3 className="font-bold text-slate-900 dark:text-white flex items-center justify-between text-sm">
                 <span>Mục lục câu hỏi</span>
-                <span className="text-xs font-medium text-emerald-600">
+                <span className="text-xs font-semibold text-emerald-600">
                   {totalAnswered}/{questions.length} đã làm
                 </span>
               </h3>
@@ -840,7 +914,7 @@ export default function ExamRoomPage() {
                         const el = document.getElementById(`q-${q.id}`);
                         if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
                       }}
-                      className={`flex h-9 w-full items-center justify-center rounded-lg text-xs transition-transform active:scale-95 ${btnStyle}`}
+                      className={`flex h-9 w-full items-center justify-center rounded-xl text-xs transition-transform active:scale-95 ${btnStyle}`}
                     >
                       {idx + 1}
                     </button>
@@ -852,7 +926,7 @@ export default function ExamRoomPage() {
                 <button
                   type="button"
                   onClick={() => setShowSubmitModal(true)}
-                  className="w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-emerald-500 transition-colors flex items-center justify-center gap-2"
+                  className="w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-md hover:bg-emerald-500 transition-colors flex items-center justify-center gap-2"
                 >
                   <Send className="h-4 w-4" />
                   <span>Nộp bài thi</span>
@@ -866,15 +940,15 @@ export default function ExamRoomPage() {
       {/* CONFIRM SUBMIT MODAL */}
       {showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">
               Xác nhận nộp bài thi
             </h3>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
               Bạn đã hoàn thành <strong className="text-emerald-600 font-bold">{totalAnswered}/{questions.length}</strong> câu hỏi.
               {totalAnswered < questions.length && (
-                <span className="block mt-1 text-rose-500 font-medium">
-                  Cảnh báo: Vẫn còn {questions.length - totalAnswered} câu chưa trả lời!
+                <span className="block mt-2 rounded-xl bg-rose-50 p-2 text-xs font-semibold text-rose-600 dark:bg-rose-950 dark:text-rose-300">
+                  Cảnh báo: Bạn còn {questions.length - totalAnswered} câu chưa làm!
                 </span>
               )}
             </p>
@@ -883,7 +957,7 @@ export default function ExamRoomPage() {
               <button
                 type="button"
                 onClick={() => setShowSubmitModal(false)}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300"
+                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300"
               >
                 Tiếp tục làm bài
               </button>
@@ -891,9 +965,9 @@ export default function ExamRoomPage() {
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => handleSubmitExam(false)}
-                className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 disabled:opacity-50"
+                className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 disabled:opacity-50"
               >
-                {isSubmitting ? "Đang nộp bài..." : "Xác nhận nộp bài"}
+                {isSubmitting ? "Đang nộp..." : "Xác nhận nộp bài"}
               </button>
             </div>
           </div>

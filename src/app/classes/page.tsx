@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
+import { useToast } from "@/components/Toast";
 import {
   Users,
   Plus,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 
 export default function ClassesPage() {
+  const toast = useToast();
   const [classes, setClasses] = useState<any[]>([]);
   const [selectedClass, setSelectedClass] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
@@ -79,10 +81,11 @@ export default function ClassesPage() {
       if (json.success) {
         setShowNewClass(false);
         setNewClassName("");
+        toast.success(`Đã tạo lớp ${newClassName} thành công!`);
         await fetchClasses();
       }
     } catch (e) {
-      alert("Lỗi tạo lớp");
+      toast.error("Lỗi tạo lớp học");
     }
   };
 
@@ -106,10 +109,11 @@ export default function ClassesPage() {
         setShowNewStudent(false);
         setStudentName("");
         setStudentCode("");
+        toast.success(`Đã thêm học sinh ${studentName}!`);
         selectClass(selectedClass);
       }
     } catch (e) {
-      alert("Lỗi thêm học sinh");
+      toast.error("Lỗi thêm học sinh");
     }
   };
 
@@ -142,12 +146,12 @@ export default function ClassesPage() {
           });
           const json = await res.json();
           if (json.success) {
-            alert(`Đã thêm thành công ${json.count} học sinh vào lớp!`);
+            toast.success(`Đã import thành công ${json.count} học sinh vào lớp!`);
             selectClass(selectedClass);
           }
         }
       } catch (err) {
-        alert("Lỗi đọc file Excel: Vui lòng kiểm tra file đúng định dạng cột: Họ và tên, SBD, Giới tính, Ngày sinh.");
+        toast.error("Lỗi đọc file Excel: Kiểm tra các cột Họ và tên, SBD, Giới tính, Ngày sinh.");
       }
     };
     reader.readAsBinaryString(file);

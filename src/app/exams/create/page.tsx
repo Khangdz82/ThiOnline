@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MathView } from "@/components/MathView";
+import { useToast } from "@/components/Toast";
 import {
   Upload,
   FileText,
@@ -19,6 +20,7 @@ import {
 
 export default function CreateExamPage() {
   const router = useRouter();
+  const toast = useToast();
 
   // Mode: "upload" (file docx) or "paste" (raw text) or "manual"
   const [inputMode, setInputMode] = useState<"upload" | "paste">("upload");
@@ -64,14 +66,15 @@ export default function CreateExamPage() {
       const json = await res.json();
       if (json.success && json.questions) {
         setQuestions(json.questions);
+        toast.success(`Đã nhận diện thành công ${json.questions.length} câu hỏi!`);
         if (json.questions.length > 0 && title === "Đề kiểm tra chất lượng") {
           setTitle(`Đề thi gồm ${json.questions.length} câu`);
         }
       } else {
-        alert("Không thể bóc tách đề: " + (json.error || "Vui lòng kiểm tra định dạng"));
+        toast.error("Không thể bóc tách đề: " + (json.error || "Vui lòng kiểm tra định dạng"));
       }
     } catch (err: any) {
-      alert("Lỗi phân tích đề thi: " + err.message);
+      toast.error("Lỗi phân tích đề thi: " + err.message);
     } finally {
       setIsParsing(false);
     }
@@ -81,11 +84,11 @@ export default function CreateExamPage() {
   const handleSaveExam = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      alert("Vui lòng nhập tên đề thi!");
+      toast.warning("Vui lòng nhập tên đề thi!");
       return;
     }
     if (questions.length === 0) {
-      alert("Đề thi chưa có câu hỏi nào! Hãy tải file hoặc dán văn bản để bóc tách.");
+      toast.warning("Đề thi chưa có câu hỏi nào! Hãy tải file hoặc dán văn bản để bóc tách.");
       return;
     }
 
@@ -110,12 +113,13 @@ export default function CreateExamPage() {
 
       const json = await res.json();
       if (json.success) {
+        toast.success("Tạo đề thi thành công!");
         router.push(`/exams/${json.examId}`);
       } else {
-        alert("Lưu đề thất bại: " + json.error);
+        toast.error("Lưu đề thất bại: " + json.error);
       }
     } catch (e: any) {
-      alert("Lỗi kết nối: " + e.message);
+      toast.error("Lỗi kết nối máy chủ");
     } finally {
       setIsSubmitting(false);
     }

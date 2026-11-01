@@ -69,7 +69,7 @@ export function seedDemoData() {
     examId,
     teacherId,
     "Đề kiểm tra Khảo sát Toán 12 (Chuẩn GDPT 2018)",
-    "Đề gồm trắc nghiệm 4 lựa chọn, đúng sai và tự luận. Giám sát chống gian lận Azota Pro.",
+    "Đề gồm trắc nghiệm 4 lựa chọn, đúng sai và tự luận. Giám sát chống gian lận ThiOnline Pro.",
     45,
     "test",
     1,

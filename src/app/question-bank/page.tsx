@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { MathView } from "@/components/MathView";
+import { useToast } from "@/components/Toast";
 import {
   BookOpen,
   Plus,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 
 export default function QuestionBankPage() {
+  const toast = useToast();
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [subject, setSubject] = useState("Toán");
@@ -74,10 +76,11 @@ export default function QuestionBankPage() {
         setShowAddModal(false);
         setContent("");
         setExplanation("");
+        toast.success("Đã thêm câu hỏi vào ngân hàng thành công!");
         fetchQuestions();
       }
     } catch (e) {
-      alert("Lỗi thêm câu hỏi");
+      toast.error("Lỗi thêm câu hỏi vào ngân hàng");
     }
   };
 
