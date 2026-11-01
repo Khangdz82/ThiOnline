@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { parseDocxBuffer, parseExamText } from "@/lib/parser";
+import { parseDocxBuffer, parseExamText, parseExcelBuffer } from "@/lib/parser";
 
 export async function POST(req: Request) {
   try {
@@ -14,7 +14,17 @@ export async function POST(req: Request) {
       }
 
       const buffer = Buffer.from(await file.arrayBuffer());
-      const parsed = await parseDocxBuffer(buffer);
+      const fileName = file.name.toLowerCase();
+
+      let parsed;
+      if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls") || fileName.endsWith(".csv")) {
+        parsed = parseExcelBuffer(buffer);
+      } else if (fileName.endsWith(".txt")) {
+        parsed = parseExamText(buffer.toString("utf-8"));
+      } else {
+        parsed = await parseDocxBuffer(buffer);
+      }
+
       return NextResponse.json({ success: true, ...parsed });
     }
 

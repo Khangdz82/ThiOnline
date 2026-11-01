@@ -135,5 +135,32 @@ function initSchema(db: Database.Database) {
       cognitive_level TEXT DEFAULT 'thong_hieu',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS shared_exams (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      grade TEXT NOT NULL,
+      topic TEXT,
+      duration INTEGER DEFAULT 45,
+      question_count INTEGER DEFAULT 10,
+      questions TEXT NOT NULL,
+      description TEXT,
+      downloads INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
+
+  // Safe incremental migrations for existing DB
+  try {
+    db.exec("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 500");
+  } catch {}
+  try {
+    db.exec("ALTER TABLE exams ADD COLUMN target_mode TEXT DEFAULT 'public'");
+  } catch {}
+  try {
+    db.exec("ALTER TABLE exams ADD COLUMN subject TEXT DEFAULT 'Toán'");
+  } catch {}
+  try {
+    db.exec("ALTER TABLE exams ADD COLUMN grade TEXT DEFAULT '12'");
+  } catch {}
 }

@@ -28,6 +28,27 @@ export async function POST(
       return NextResponse.json({ success: false, error: "Đề thi không tồn tại" }, { status: 404 });
     }
 
+    // Check max attempts
+    const maxAttempts = Number(exam.max_attempts) || 1;
+    if (maxAttempts < 9999) {
+      const priorCount = db
+        .prepare(`
+          SELECT COUNT(*) as count FROM submissions
+          WHERE exam_id = ? AND (student_name = ? OR (student_code != '' AND student_code = ?))
+        `)
+        .get(examId, student_name, student_code) as { count: number };
+
+      if (priorCount && priorCount.count >= maxAttempts) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Bạn đã đạt giới hạn tối đa ${maxAttempts} lượt làm bài cho đề thi này.`,
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     const questions = db
       .prepare("SELECT * FROM questions WHERE exam_id = ? ORDER BY question_index ASC")
       .all(examId) as any[];

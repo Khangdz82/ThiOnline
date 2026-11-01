@@ -1,4 +1,5 @@
 import mammoth from "mammoth";
+import * as XLSX from "xlsx";
 
 export interface ParsedOption {
   id: string; // 'A' | 'B' | 'C' | 'D' or 'a' | 'b' | 'c' | 'd'
@@ -218,4 +219,90 @@ function parseSingleQuestionBlock(text: string, qNum: number, tableAnswer?: stri
 export async function parseDocxBuffer(buffer: Buffer): Promise<ParseResult> {
   const result = await mammoth.extractRawText({ buffer });
   return parseExamText(result.value);
+}
+
+/**
+ * Parse Excel .xlsx / .xls Buffer to structured questions
+ */
+export function parseExcelBuffer(buffer: Buffer): ParseResult {
+  const wb = XLSX.read(buffer, { type: "buffer" });
+  const sheetName = wb.SheetNames[0];
+  const ws = wb.Sheets[sheetName];
+  const rawRows = XLSX.utils.sheet_to_json(ws) as any[];
+
+  const questions: ParsedQuestion[] = [];
+  let index = 1;
+
+  for (const row of rawRows) {
+    const content =
+      row["Câu hỏi"] ||
+      row["Nội dung"] ||
+      row["Cau hoi"] ||
+      row["Noi dung"] ||
+      row["Question"] ||
+      row["Content"] ||
+      Object.values(row)[0];
+
+    if (!content || !String(content).trim()) continue;
+
+    const optA = row["Phương án A"] || row["Đáp án A"] || row["A"] || row["Dap an A"] || "";
+    const optB = row["Phương án B"] || row["Đáp án B"] || row["B"] || row["Dap an B"] || "";
+    const optC = row["Phương án C"] || row["Đáp án C"] || row["C"] || row["Dap an C"] || "";
+    const optD = row["Phương án D"] || row["Đáp án D"] || row["D"] || row["Dap an D"] || "";
+
+    const correct = String(
+      row["Đáp án đúng"] ||
+      row["Dap an dung"] ||
+      row["Đáp án"] ||
+      row["Correct"] ||
+      row["Key"] ||
+      ""
+    ).trim().toUpperCase();
+
+    const explanation = String(
+      row["Lời giải"] ||
+      row["Loi giai"] ||
+      row["Giải thích"] ||
+      row["Explanation"] ||
+      ""
+    ).trim();
+
+    const rawType = String(row["Dạng câu"] || row["Loại câu"] || row["Type"] || "").toLowerCase();
+    let type: "single_choice" | "multiple_choice" | "true_false" | "short_answer" | "essay" = "single_choice";
+    if (rawType.includes("tự luận") || rawType.includes("essay")) {
+      type = "essay";
+    } else if (rawType.includes("đúng sai") || rawType.includes("true_false")) {
+      type = "true_false";
+    } else if (rawType.includes("ngắn") || rawType.includes("short")) {
+      type = "short_answer";
+    }
+
+    const options: ParsedOption[] = [];
+    if (optA) options.push({ id: "A", text: String(optA).trim() });
+    if (optB) options.push({ id: "B", text: String(optB).trim() });
+    if (optC) options.push({ id: "C", text: String(optC).trim() });
+    if (optD) options.push({ id: "D", text: String(optD).trim() });
+
+    if (options.length === 0 && type === "single_choice") {
+      type = "essay";
+    }
+
+    const score = Number(row["Điểm"] || row["Score"] || 1.0);
+
+    questions.push({
+      index,
+      type,
+      content: String(content).trim(),
+      options,
+      correct_answer: correct || (options[0]?.id || "A"),
+      explanation,
+      score: isNaN(score) ? 1.0 : score,
+    });
+    index++;
+  }
+
+  return {
+    questions,
+    rawText: `Excel Import: ${questions.length} câu hỏi được nhập thành công.`,
+  };
 }

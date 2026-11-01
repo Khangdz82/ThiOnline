@@ -30,10 +30,13 @@ export async function POST(req: Request) {
     const {
       title,
       description = "",
+      subject = "Toán",
+      grade = "12",
       duration = 45,
       exam_type = "test",
       password = "",
       is_published = 1,
+      target_mode = "public",
       assigned_class_ids = [],
       shuffle_questions = 0,
       shuffle_options = 0,
@@ -41,6 +44,8 @@ export async function POST(req: Request) {
       allow_view_score = "after_submit",
       allow_view_answers = 1,
       anti_cheat_level = "basic",
+      start_time = null,
+      end_time = null,
       questions = [],
     } = body;
 
@@ -58,8 +63,9 @@ export async function POST(req: Request) {
       INSERT INTO exams (
         id, teacher_id, title, description, duration, exam_type, password,
         is_published, assigned_class_ids, shuffle_questions, shuffle_options,
-        max_attempts, allow_view_score, allow_view_answers, anti_cheat_level
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        max_attempts, allow_view_score, allow_view_answers, anti_cheat_level,
+        start_time, end_time, target_mode, subject, grade
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     insertExam.run(
@@ -77,7 +83,12 @@ export async function POST(req: Request) {
       max_attempts,
       allow_view_score,
       allow_view_answers ? 1 : 0,
-      anti_cheat_level
+      anti_cheat_level,
+      start_time,
+      end_time,
+      target_mode,
+      subject,
+      grade
     );
 
     const insertQ = db.prepare(`

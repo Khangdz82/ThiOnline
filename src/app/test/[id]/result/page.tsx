@@ -85,17 +85,30 @@ export default function ExamResultPage() {
 
           {/* Score Badge */}
           <div className="flex flex-col items-center justify-center rounded-2xl bg-emerald-50 p-6 text-center dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900">
-            <span className="text-xs font-medium uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-              {isGraded ? "Điểm số đạt được" : "Điểm trắc nghiệm tạm tính"}
-            </span>
-            <div className="mt-1 flex items-baseline gap-1 font-mono text-4xl font-black text-emerald-600 dark:text-emerald-400">
-              <span>{submission.score}</span>
-              <span className="text-lg text-slate-400">/ 10</span>
-            </div>
-            {!isGraded && (
-              <span className="mt-1 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-                (Đang chờ GV chấm phần tự luận)
-              </span>
+            {exam?.allow_view_score === "never" ? (
+              <div className="py-2">
+                <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                  Điểm số được bảo mật
+                </span>
+                <p className="mt-1 text-xs text-slate-500">
+                  Giáo viên quy định không hiển thị điểm ngay sau khi nộp.
+                </p>
+              </div>
+            ) : (
+              <>
+                <span className="text-xs font-medium uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                  {isGraded ? "Điểm số đạt được" : "Điểm trắc nghiệm tạm tính"}
+                </span>
+                <div className="mt-1 flex items-baseline gap-1 font-mono text-4xl font-black text-emerald-600 dark:text-emerald-400">
+                  <span>{submission.score}</span>
+                  <span className="text-lg text-slate-400">/ 10</span>
+                </div>
+                {!isGraded && (
+                  <span className="mt-1 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                    (Đang chờ GV chấm phần tự luận)
+                  </span>
+                )}
+              </>
             )}
           </div>
         </div>

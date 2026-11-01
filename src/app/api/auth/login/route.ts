@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     const db = getDb();
     const user = db
       .prepare(`
-        SELECT id, username, name, email, phone, role, school
+        SELECT id, username, name, email, phone, role, school, COALESCE(points, 500) as points
         FROM users
         WHERE (username = ? OR email = ? OR phone = ?) AND password_hash = ?
       `)
