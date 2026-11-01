@@ -45,7 +45,7 @@ export default function HomePage() {
 
           <p className="mx-auto mt-5 max-w-2xl text-base text-slate-600 sm:text-lg dark:text-slate-300">
             Tối ưu tuyệt đối trải nghiệm: Học sinh vào làm bài nhanh không cần tạo tài khoản rườm rà.
-            Giáo viên bóc tách đề Word/LaTeX tự động, phòng thi Focus chống chuyển tab, chấm tự luận trực tiếp trên ảnh bài làm.
+            Giáo viên bóc tách đề Word/LaTeX tự động, phòng thi chống gian lận, chấm tự luận trực tiếp trên ảnh bài làm.
           </p>
 
           {/* Quick Exam Entry Card for Students */}

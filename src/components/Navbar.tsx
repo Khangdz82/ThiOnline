@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   BookOpen,
   LayoutDashboard,
-  ShieldCheck,
   Zap,
   LogIn,
   User,
@@ -92,11 +91,6 @@ export const Navbar: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-900">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            <span>Phòng thi Focus</span>
-          </div>
-
           <Link
             href="/exams/create"
             className="btn btn-primary px-3.5 py-2 text-sm"

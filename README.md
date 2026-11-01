@@ -1,6 +1,6 @@
 # ThiOnline - Nền tảng Thi & Đánh giá Trực tuyến
 
-Hệ thống thi, kiểm tra và đánh giá học sinh trực tuyến toàn diện: bóc tách đề Word/Excel/KaTeX thông minh, phòng thi Focus chống gian lận, chấm tự luận trực tiếp trên ảnh bài làm, quản lý lớp học và xuất báo cáo Excel chuẩn Bộ GD&ĐT.
+Hệ thống thi, kiểm tra và đánh giá học sinh trực tuyến toàn diện: bóc tách đề Word/Excel/KaTeX thông minh, phòng thi chống gian lận, chấm tự luận trực tiếp trên ảnh bài làm, quản lý lớp học và xuất báo cáo Excel chuẩn Bộ GD&ĐT.
 
 ---
 
