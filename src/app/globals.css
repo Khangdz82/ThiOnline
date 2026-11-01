@@ -81,6 +81,13 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
 }
 
+/* Anti-print protection for exams */
+@media print {
+  body {
+    display: none !important;
+  }
+}
+
 /* Custom Select with SVG Chevron Arrow */
 select {
   appearance: none;

@@ -76,6 +76,7 @@ export default function ExamRoomPage() {
   // Anti-cheat State
   const [violationCount, setViolationCount] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isBlurred, setIsBlurred] = useState(false);
   const awayTimerRef = useRef<number | null>(null);
   const MAX_ALLOWED_VIOLATIONS = 3;
 
@@ -140,7 +141,7 @@ export default function ExamRoomPage() {
     } catch {}
   }, [answers, hasStarted, examId, studentName, studentCode, className]);
 
-  // 2. Advanced Anti-cheat: Block Right Click, Copy, Cut, Paste, F12, Tab-switch
+  // 2. High-Grade Anti-cheat Engine: ContextMenu, Select, Clipboard, DevTools, Fullscreen, Blur
   useEffect(() => {
     if (!hasStarted) return;
 
@@ -148,6 +149,11 @@ export default function ExamRoomPage() {
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
       toast.warning("Hành động bị chặn: Không được dùng chuột phải trong phòng thi!");
+    };
+
+    // Block text selection
+    const handleSelectStart = (e: Event) => {
+      e.preventDefault();
     };
 
     // Block copy / cut / paste
@@ -160,32 +166,58 @@ export default function ExamRoomPage() {
       toast.warning("Hành động bị chặn: Không được dán văn bản từ ngoài vào!");
     };
 
-    // Block keys (Ctrl+C, Ctrl+V, Ctrl+U, F12)
+    // Block prohibited keyboard shortcuts (DevTools, Save, Print, Find, Copy, Cut)
     const handleKeyDown = (e: KeyboardEvent) => {
+      // F12 key
+      if (e.key === "F12") {
+        e.preventDefault();
+        handleViolation("prohibited_key", 0, "Nhấn phím F12 mở DevTools");
+        toast.warning("Phím tắt F12 bị vô hiệu hóa!");
+        return;
+      }
+
+      // Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C / Ctrl+U (DevTools & Source)
       if (
-        (e.ctrlKey && (e.key === "c" || e.key === "v" || e.key === "u" || e.key === "a")) ||
-        e.key === "F12"
+        (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "i" || e.key === "J" || e.key === "j" || e.key === "C" || e.key === "c")) ||
+        (e.ctrlKey && (e.key === "U" || e.key === "u"))
       ) {
         e.preventDefault();
-        toast.warning("Phím tắt này bị vô hiệu hóa trong phòng thi!");
+        handleViolation("prohibited_key", 0, "Dùng phím tắt xem mã nguồn / DevTools");
+        toast.warning("Phím tắt xem mã nguồn bị cấm!");
+        return;
+      }
+
+      // Ctrl+C, Ctrl+V, Ctrl+A, Ctrl+P (Print), Ctrl+S (Save), Ctrl+F (Search)
+      if (e.ctrlKey && (e.key === "c" || e.key === "v" || e.key === "a" || e.key === "p" || e.key === "s" || e.key === "f")) {
+        e.preventDefault();
+        toast.warning(`Phím tắt Ctrl+${e.key.toUpperCase()} bị vô hiệu hóa trong phòng thi!`);
+        return;
+      }
+
+      // Alt+Tab detection
+      if (e.altKey && e.key === "Tab") {
+        e.preventDefault();
+        handleViolation("alt_tab", 0, "Nhấn phím Alt+Tab để chuyển ứng dụng");
       }
     };
 
     // Tab switch & visibility detection
     const handleVisibilityChange = () => {
       if (document.hidden) {
+        setIsBlurred(true);
         awayTimerRef.current = Date.now();
       } else {
         if (awayTimerRef.current) {
           const secondsAway = Math.round((Date.now() - awayTimerRef.current) / 1000);
           awayTimerRef.current = null;
-          handleViolation("tab_switch", secondsAway, `Rời khỏi màn hình thi ${secondsAway} giây`);
+          handleViolation("tab_switch", secondsAway, `Rời khỏi tab thi ${secondsAway} giây`);
         }
       }
     };
 
     const handleWindowBlur = () => {
       if (!document.hidden && !awayTimerRef.current) {
+        setIsBlurred(true);
         awayTimerRef.current = Date.now();
       }
     };
@@ -198,6 +230,34 @@ export default function ExamRoomPage() {
       }
     };
 
+    // Fullscreen change detection (Strict Mode)
+    const handleFullscreenChange = () => {
+      const inFullscreen = !!document.fullscreenElement;
+      setIsFullscreen(inFullscreen);
+      if (!inFullscreen && hasStarted && exam?.anti_cheat_level === "strict") {
+        handleViolation("exit_fullscreen", 0, "Thoát chế độ toàn màn hình khi đang thi");
+      }
+    };
+
+    // Mouse leave window boundary (Strict Mode)
+    const handleMouseLeave = () => {
+      if (exam?.anti_cheat_level === "strict") {
+        toast.warning("Chuột vừa di chuyển ra ngoài phạm vi cửa sổ thi!");
+      }
+    };
+
+    // DevTools resize detection
+    const devToolsInterval = setInterval(() => {
+      if (exam?.anti_cheat_level === "strict") {
+        const threshold = 160;
+        const widthDiff = window.outerWidth - window.innerWidth > threshold;
+        const heightDiff = window.outerHeight - window.innerHeight > threshold;
+        if (widthDiff || heightDiff) {
+          handleViolation("devtools_open", 0, "Phát hiện mở cửa sổ công cụ kiểm tra (DevTools)");
+        }
+      }
+    }, 2000);
+
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = "Bạn đang làm bài thi! Rời khỏi trang sẽ nộp bài ngay lập tức.";
@@ -205,6 +265,7 @@ export default function ExamRoomPage() {
     };
 
     document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("selectstart", handleSelectStart);
     document.addEventListener("copy", handleCopy);
     document.addEventListener("cut", handleCopy);
     document.addEventListener("paste", handlePaste);
@@ -212,10 +273,14 @@ export default function ExamRoomPage() {
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("blur", handleWindowBlur);
     window.addEventListener("focus", handleWindowFocus);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.documentElement.addEventListener("mouseleave", handleMouseLeave);
     window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
+      clearInterval(devToolsInterval);
       document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("selectstart", handleSelectStart);
       document.removeEventListener("copy", handleCopy);
       document.removeEventListener("cut", handleCopy);
       document.removeEventListener("paste", handlePaste);
@@ -223,21 +288,25 @@ export default function ExamRoomPage() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleWindowBlur);
       window.removeEventListener("focus", handleWindowFocus);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.documentElement.removeEventListener("mouseleave", handleMouseLeave);
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [hasStarted, examId, violationCount]);
+  }, [hasStarted, examId, violationCount, exam?.anti_cheat_level]);
 
   const handleViolation = async (eventType: string, durationSeconds: number, details: string) => {
+    if (exam?.anti_cheat_level === "none") return;
+
     const newCount = violationCount + 1;
     setViolationCount(newCount);
 
     if (newCount >= MAX_ALLOWED_VIOLATIONS) {
-      toast.error(`Bạn đã vi phạm chuyển tab quá ${MAX_ALLOWED_VIOLATIONS} lần! Bài thi tự động thu hồi.`);
+      toast.error(`Bạn đã vi phạm quy chế thi quá ${MAX_ALLOWED_VIOLATIONS} lần! Bài thi tự động thu hồi.`);
       handleSubmitExam(true);
       return;
     }
 
-    toast.warning(`Cảnh báo vi phạm (${newCount}/${MAX_ALLOWED_VIOLATIONS}): Bạn vừa rời màn hình thi!`);
+    toast.warning(`Cảnh báo vi phạm (${newCount}/${MAX_ALLOWED_VIOLATIONS}): ${details}`);
 
     try {
       await fetch(`/api/exams/${examId}/violations`, {
@@ -971,6 +1040,34 @@ export default function ExamRoomPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* ANTI-CHEAT PRIVACY OVERLAY CURTAIN */}
+      {isBlurred && hasStarted && exam?.anti_cheat_level !== "none" && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-2xl p-6 text-center select-none">
+          <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-rose-500/20 text-rose-500 ring-8 ring-rose-500/10 mb-6">
+            <ShieldAlert className="h-10 w-10 animate-pulse" />
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            BẠN VỪA RỜI KHỎI MÀN HÌNH BÀI THI!
+          </h2>
+          <p className="mt-3 max-w-md text-sm text-slate-300">
+            Nội dung bài thi đã được che phủ để bảo mật và chống gian lận. Thời gian rời khỏi cửa sổ đang được hệ thống ghi nhận.
+          </p>
+          <div className="mt-5 rounded-2xl bg-rose-950/60 border border-rose-800/80 px-5 py-2.5 text-rose-300 font-mono text-sm">
+            Số lần vi phạm: <span className="font-bold text-rose-400">{violationCount}/{MAX_ALLOWED_VIOLATIONS}</span> (Quá 3 lần tự động thu bài)
+          </div>
+          <button
+            onClick={() => {
+              setIsBlurred(false);
+              if (exam?.anti_cheat_level === "strict" && !document.fullscreenElement) {
+                toggleFullscreen();
+              }
+            }}
+            className="btn btn-primary mt-8 px-8 py-3.5 text-sm font-bold shadow-lg"
+          >
+            Tôi đã quay lại, tiếp tục làm bài
+          </button>
         </div>
       )}
     </div>
