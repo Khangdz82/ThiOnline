@@ -1,5 +1,5 @@
 {
-  "name": "azota_clone",
+  "name": "thionline",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,9 +9,18 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/katex": "^0.16.8",
+    "better-sqlite3": "^13.0.3",
+    "clsx": "^2.1.1",
+    "katex": "^0.19.1",
+    "lucide-react": "^1.66.0",
+    "mammoth": "^1.13.0",
     "next": "16.4.3",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "tailwind-merge": "^3.7.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
